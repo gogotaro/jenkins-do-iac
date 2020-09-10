@@ -1,0 +1,3 @@
+name: beamsorrasak-jenkins-do-iac
+runtime: nodejs
+description: Jenkins Infrastructure As a Code on DigitalOcean with Pulumi.
