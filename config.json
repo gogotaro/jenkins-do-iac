@@ -26,7 +26,7 @@
         "name": "jenkins-master-home",
         "region": "sgp1",
         "size": 50,
-        "initialFilesystemType": "ext4"
+        "initialFilesystemType": "xfs"
     },
     "dropletMaster": {
         "name": "jenkins-master",
@@ -34,10 +34,27 @@
         "region": "sgp1",
         "size": "s-1vcpu-1gb"
     },
+    "firewallSlave": {
+        "name": "jenkins-slave-firewall"
+    },
+    "volumeSlave": {
+        "name": "jenkins-slave-home",
+        "region": "sgp1",
+        "size": 50,
+        "initialFilesystemType": "xfs"
+    },
+    "dropletSlave": {
+        "name": "jenkins-slave",
+        "image": "docker-20-04",
+        "region": "sgp1",
+        "size": "s-1vcpu-1gb"
+    },
     "misc": {
         "masterImage": "jenkins/jenkins:2.256-alpine",
+        "slaveImage": "jenkins/jnlp-slave:alpine",
         "jenkinsUser": "admin",
         "jenkinsPassword": "admin",
-        "dobsToken": "put-your-do-token-here"
+        "dobsMasterToken": "put-your-do-token-here",
+        "dobsSlaveToken": "put-your-do-token-here"
     }
 }

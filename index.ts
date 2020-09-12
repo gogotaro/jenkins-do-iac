@@ -31,49 +31,33 @@ const _tagSlave = new Tag("tag-slave", {
     name: config.tagSlave.name
 })
 
-new Firewall("firewall-master", {
-    name: config.firewallMaster.name,
-    inboundRules: [
-        { protocol: "tcp", portRange: "22", sourceAddresses: ["0.0.0.0/0"] },
-        { protocol: "tcp", portRange: "8080", sourceAddresses: ["0.0.0.0/0"] },
-        { protocol: "tcp", portRange: "50000", sourceAddresses: [config.vpc.ipRange] }
-    ],
-    outboundRules: [
-        { protocol: "tcp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] }
-    ],
-    tags: [_tagMaster.id]
-})
-
 const _volumeMaster = new Volume("volume-master", config.volumeMaster as VolumeArgs)
 
 const _userDataMaster = `
 #cloud-config
 
 write_files:
-  - path: /root/init.groovy.d/init.groovy
-    content: |
+  - path: /root/init.groovy.d/bypass.groovy
+    content: |  
       #!/usr/bin/env groovy
       import jenkins.model.*
       import hudson.security.*
-      import jenkins.install.InstallState
       
       def instance = Jenkins.getInstance()
 
-      def hudsonRealm = new HudsonPrivateSecurityRealm(false, false, null)
+      def hudsonRealm = new HudsonPrivateSecurityRealm(false)
       instance.setSecurityRealm(hudsonRealm)
       def user = hudsonRealm.createAccount('${config.misc.jenkinsUser}', '${config.misc.jenkinsPassword}')
       user.save()
 
       def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
       strategy.setAllowAnonymousRead(false)
-      strategy.add(Jenkins.ADMINISTER, '${config.misc.jenkinsUser}')
       instance.setAuthorizationStrategy(strategy)
-
-      InstallState.INITIAL_SETUP_COMPLETED.initializeState()
 
       instance.save()
 runcmd:
-  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletMaster.region} DOBS_TOKEN=${config.misc.dobsToken}
+  - docker pull ${config.misc.masterImage}
+  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletMaster.region} DOBS_TOKEN=${config.misc.dobsMasterToken} LINUX_VOLUME_FILEMODE=0777
   - docker run -d --name=jenkins-master --restart=always -p 8080:8080 -p 50000:50000 -e JAVA_OPTS=-Djenkins.install.runSetupWizard=false -v /root/init.groovy.d:/var/jenkins_home/init.groovy.d -v ${config.volumeMaster.name}:/var/jenkins_home ${config.misc.masterImage}
 `
 
@@ -89,9 +73,61 @@ const _dropletMaster = new Droplet("droplet-master", {
     userData: _userDataMaster
 })
 
+new Firewall("firewall-master", {
+    name: config.firewallMaster.name,
+    inboundRules: [
+        { protocol: "tcp", portRange: "22", sourceAddresses: ["0.0.0.0/0"] },
+        { protocol: "tcp", portRange: "8080", sourceAddresses: ["0.0.0.0/0"] },
+        { protocol: "tcp", portRange: "50000", sourceAddresses: [config.vpc.ipRange] }
+    ],
+    outboundRules: [
+        { protocol: "icmp", destinationAddresses: ["0.0.0.0/0"] },
+        { protocol: "tcp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] },
+        { protocol: "udp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] }
+    ],
+    tags: [_tagMaster.id]
+})
+
+const _volumeSlave = new Volume("volume-slave", config.volumeSlave as VolumeArgs)
+
+const _userDataSlave = `
+#cloud-config
+
+runcmd:
+  - docker pull ${config.misc.slaveImage}
+  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletSlave.region} DOBS_TOKEN=${config.misc.dobsSlaveToken} LINUX_VOLUME_FILEMODE=0777
+  - docker run -d --name=jenkins-slave --restart=always -e JENKINS_URL=http://${_dropletMaster.ipv4AddressPrivate}:8080 -e JENKINS_SECRET=xxxxxxxxxx -e JENKINS_AGENT_NAME=xxxxx -e JENKINS_AGENT_WORKDIR="/var/jenkins" -v ${config.volumeSlave.name}:/var/jenkins ${config.misc.slaveImage}
+`
+
+const _dropletSlave = new Droplet("droplet-slave", {
+    name: config.dropletSlave.name,
+    image: config.dropletSlave.image,
+    region: config.dropletSlave.region as Region,
+    size: config.dropletSlave.size as DropletSlug,
+    sshKeys: [_sshKey.fingerprint],
+    tags: [_tagSlave.id],
+    vpcUuid: _vpc.id,
+    volumeIds: [_volumeSlave.id],
+    userData: _userDataSlave
+})
+
+new Firewall("firewall-slave", {
+    name: config.firewallSlave.name,
+    inboundRules: [
+        { protocol: "tcp", portRange: "22", sourceAddresses: ["0.0.0.0/0"] }
+    ],
+    outboundRules: [
+        { protocol: "icmp", destinationAddresses: ["0.0.0.0/0"] },
+        { protocol: "tcp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] },
+        { protocol: "udp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] }
+    ],
+    tags: [_tagSlave.id]
+})
+
 new ProjectResources("projectResources", {
     project: _project.id,
     resources: [
-        _dropletMaster.dropletUrn
+        _dropletMaster.dropletUrn,
+        _dropletSlave.dropletUrn
     ]
 })
