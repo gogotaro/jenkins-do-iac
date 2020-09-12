@@ -36,6 +36,8 @@
     },
     "misc": {
         "masterImage": "jenkins/jenkins:2.256-alpine",
+        "jenkinsUser": "admin",
+        "jenkinsPassword": "admin",
         "dobsToken": "put-your-do-token-here"
     }
 }

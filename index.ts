@@ -49,9 +49,32 @@ const _volumeMaster = new Volume("volume-master", config.volumeMaster as VolumeA
 const _userDataMaster = `
 #cloud-config
 
+write_files:
+  - path: /root/init.groovy.d/init.groovy
+    content: |
+      #!/usr/bin/env groovy
+      import jenkins.model.*
+      import hudson.security.*
+      import jenkins.install.InstallState
+      
+      def instance = Jenkins.getInstance()
+
+      def hudsonRealm = new HudsonPrivateSecurityRealm(false, false, null)
+      instance.setSecurityRealm(hudsonRealm)
+      def user = hudsonRealm.createAccount('${config.misc.jenkinsUser}', '${config.misc.jenkinsPassword}')
+      user.save()
+
+      def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+      strategy.setAllowAnonymousRead(false)
+      strategy.add(Jenkins.ADMINISTER, '${config.misc.jenkinsUser}')
+      instance.setAuthorizationStrategy(strategy)
+
+      InstallState.INITIAL_SETUP_COMPLETED.initializeState()
+
+      instance.save()
 runcmd:
   - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletMaster.region} DOBS_TOKEN=${config.misc.dobsToken}
-  - docker run -d --name=jenkins-master --restart=always -p 8080:8080 -p 50000:50000 -v ${config.volumeMaster.name}:/var/jenkins_home ${config.misc.masterImage}
+  - docker run -d --name=jenkins-master --restart=always -p 8080:8080 -p 50000:50000 -e JAVA_OPTS=-Djenkins.install.runSetupWizard=false -v /root/init.groovy.d:/var/jenkins_home/init.groovy.d -v ${config.volumeMaster.name}:/var/jenkins_home ${config.misc.masterImage}
 `
 
 const _dropletMaster = new Droplet("droplet-master", {
