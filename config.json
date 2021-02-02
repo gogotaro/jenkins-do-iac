@@ -50,7 +50,7 @@
         "size": "s-1vcpu-1gb"
     },
     "misc": {
-        "masterImage": "jenkins/jenkins:2.257-alpine",
+        "masterImage": "jenkins/jenkins:alpine",
         "slaveImage": "jenkins/jnlp-slave:alpine",
         "jenkinsUser": "admin",
         "jenkinsPassword": "admin",
