@@ -42,7 +42,9 @@ write_files:
       #!/usr/bin/env groovy
       import jenkins.model.*
       import hudson.security.*
-      
+      import hudson.model.Node.Mode
+      import hudson.slaves.*
+
       def instance = Jenkins.getInstance()
 
       def hudsonRealm = new HudsonPrivateSecurityRealm(false)
@@ -55,9 +57,20 @@ write_files:
       instance.setAuthorizationStrategy(strategy)
 
       instance.save()
+
+      DumbSlave dumb = new DumbSlave(
+        '${config.misc.jenkinsAgentName}',
+        '${config.misc.jenkinsAgentDescription}',
+        '${config.misc.jenkinsAgentWorkDir}',
+        '${config.misc.jenkinsAgentExecuteNumber}',
+        Mode.NORMAL,
+        '${config.misc.jenkinsAgentLabel}',
+        new JNLPLauncher(),
+        RetentionStrategy.INSTANCE)
+      Jenkins.instance.addNode(dumb)
 runcmd:
   - docker pull ${config.misc.masterImage}
-  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletMaster.region} DOBS_TOKEN=${config.misc.dobsMasterToken} LINUX_VOLUME_FILEMODE=0777
+  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletMaster.region} DOBS_TOKEN=${config.misc.dobsToken} LINUX_VOLUME_FILEMODE=0777
   - docker run -d --name=jenkins-master --restart=always -p 8080:8080 -p 50000:50000 -e JAVA_OPTS=-Djenkins.install.runSetupWizard=false -v /root/init.groovy.d:/var/jenkins_home/init.groovy.d -v ${config.volumeMaster.name}:/var/jenkins_home ${config.misc.masterImage}
 `
 
@@ -95,8 +108,8 @@ const _userDataSlave = `
 
 runcmd:
   - docker pull ${config.misc.slaveImage}
-  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletSlave.region} DOBS_TOKEN=${config.misc.dobsSlaveToken} LINUX_VOLUME_FILEMODE=0777
-  - docker run -d --name=jenkins-slave --restart=always -e JENKINS_URL=http://${_dropletMaster.ipv4AddressPrivate}:8080 -e JENKINS_SECRET=xxxxxxxxxx -e JENKINS_AGENT_NAME=xxxxx -e JENKINS_AGENT_WORKDIR="/var/jenkins" -v ${config.volumeSlave.name}:/var/jenkins ${config.misc.slaveImage}
+  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletSlave.region} DOBS_TOKEN=${config.misc.dobsToken} LINUX_VOLUME_FILEMODE=0777
+  - 'curl -L https://raw.githubusercontent.com/beamsorrasak/jenkins-do-iac/master/bash/slave-init.sh -o /root/slave-init.sh'
 `
 
 const _dropletSlave = new Droplet("droplet-slave", {
