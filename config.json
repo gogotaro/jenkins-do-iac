@@ -51,10 +51,14 @@
     },
     "misc": {
         "masterImage": "jenkins/jenkins:alpine",
-        "slaveImage": "jenkins/jnlp-slave:alpine",
+        "slaveImage": "jenkins/inbound-agent:alpine",
         "jenkinsUser": "admin",
         "jenkinsPassword": "admin",
-        "dobsMasterToken": "put-your-do-token-here",
-        "dobsSlaveToken": "put-your-do-token-here"
+        "jenkinsAgentName": "jenkins-agent",
+        "jenkinsAgentDescription": "jenkins-agent",
+        "jenkinsAgentWorkDir": "/var/jenkins",
+        "jenkinsAgentExecuteNumber": 2,
+        "jenkinsAgentLabel": "jenkins-agent",
+        "dobsToken": ""
     }
 }
