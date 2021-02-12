@@ -1,3 +1,0 @@
-config:
-  digitalocean:token:
-    secure: put-your-do-token-here
