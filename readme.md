@@ -24,6 +24,8 @@ pulumi config set digitalocean:token XXXXXXXXXXXXXX --secret
 
 Generate ssh key and put public key at ssh directory with name "id_rsa.pub"
 
+Update digitalocean token in file config.json at "misc.dobsToken" section
+
 Deploy stack to digitalocean and pulumi
 
 ```bash
