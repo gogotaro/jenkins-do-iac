@@ -110,6 +110,9 @@ runcmd:
   - docker pull ${config.misc.slaveImage}
   - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletSlave.region} DOBS_TOKEN=${config.misc.dobsToken} LINUX_VOLUME_FILEMODE=0777
   - 'curl -L https://raw.githubusercontent.com/beamsorrasak/jenkins-do-iac/master/bash/slave-init.sh -o /root/slave-init.sh'
+  - [sed,-i,'s/ipv4AddressPrivate/${_dropletMaster.ipv4AddressPrivate}/',/root/slave-init.sh]
+  - [sed,-i,'s/jenkinsUser/${config.misc.jenkinsUser}/',/root/slave-init.sh]
+  - [sed,-i,'s/jenkinsPassword/${config.misc.jenkinsPassword}/',/root/slave-init.sh]
 `
 
 const _dropletSlave = new Droplet("droplet-slave", {
