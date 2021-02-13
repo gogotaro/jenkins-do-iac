@@ -1,6 +1,7 @@
 # Jenkins DO IAC
 
 Jenkins Infrastructure As a Code on DigitalOcean with Pulumi.
+With these pulumi script you can easily create jenkins master & slave node with automate connection on DigitalOcean cloud provider.
 
 ## Installation
 
