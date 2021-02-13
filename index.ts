@@ -103,47 +103,56 @@ new Firewall("firewall-master", {
 
 const _volumeSlave = new Volume("volume-slave", config.volumeSlave as VolumeArgs)
 
-const _userDataSlave = `
-#cloud-config
+_dropletMaster.ipv4AddressPrivate.apply(masterIP => {
+    
+    const _userDataSlave = `
+    #cloud-config
 
-runcmd:
-  - docker pull ${config.misc.slaveImage}
-  - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletSlave.region} DOBS_TOKEN=${config.misc.dobsToken} LINUX_VOLUME_FILEMODE=0777
-  - 'curl -L https://raw.githubusercontent.com/beamsorrasak/jenkins-do-iac/master/bash/slave-init.sh -o /root/slave-init.sh'
-  - [sed,-i,'s/ipv4AddressPrivate/${_dropletMaster.ipv4AddressPrivate}/',/root/slave-init.sh]
-  - [sed,-i,'s/jenkinsUser/${config.misc.jenkinsUser}/',/root/slave-init.sh]
-  - [sed,-i,'s/jenkinsPassword/${config.misc.jenkinsPassword}/',/root/slave-init.sh]
-`
+    runcmd:
+      - docker pull ${config.misc.slaveImage}
+      - docker plugin install rexray/dobs --grant-all-permissions DOBS_REGION=${config.dropletSlave.region} DOBS_TOKEN=${config.misc.dobsToken} LINUX_VOLUME_FILEMODE=0777
+      - 'curl -L https://raw.githubusercontent.com/beamsorrasak/jenkins-do-iac/master/bash/slave-init.sh -o /root/slave-init.sh'
+      - [sed,-i,'s/ipv4AddressPrivate/${masterIP}/',/root/slave-init.sh]
+      - [sed,-i,'s/jenkinsUser/${config.misc.jenkinsUser}/',/root/slave-init.sh]
+      - [sed,-i,'s/jenkinsPassword/${config.misc.jenkinsPassword}/',/root/slave-init.sh]
+      - [sed,-i,'s/jenkinsAgentName/${config.misc.jenkinsAgentName}/',/root/slave-init.sh]
+      - [sed,-i,'s/jenkinsAgentWorkDir/${config.misc.jenkinsAgentWorkDir}/',/root/slave-init.sh]
+      - [sed,-i,'s/volumeSlaveName/${config.volumeSlave.name}/',/root/slave-init.sh]
+      - [sed,-i,'s/slaveImage/${config.misc.slaveImage}/',/root/slave-init.sh]
+    `
 
-const _dropletSlave = new Droplet("droplet-slave", {
-    name: config.dropletSlave.name,
-    image: config.dropletSlave.image,
-    region: config.dropletSlave.region as Region,
-    size: config.dropletSlave.size as DropletSlug,
-    sshKeys: [_sshKey.fingerprint],
-    tags: [_tagSlave.id],
-    vpcUuid: _vpc.id,
-    volumeIds: [_volumeSlave.id],
-    userData: _userDataSlave
-})
+    const _dropletSlave = new Droplet("droplet-slave", {
+        name: config.dropletSlave.name,
+        image: config.dropletSlave.image,
+        region: config.dropletSlave.region as Region,
+        size: config.dropletSlave.size as DropletSlug,
+        sshKeys: [_sshKey.fingerprint],
+        tags: [_tagSlave.id],
+        vpcUuid: _vpc.id,
+        volumeIds: [_volumeSlave.id],
+        userData: _userDataSlave
+    }, {
+        dependsOn: _dropletMaster
+    })
 
-new Firewall("firewall-slave", {
-    name: config.firewallSlave.name,
-    inboundRules: [
-        { protocol: "tcp", portRange: "22", sourceAddresses: ["0.0.0.0/0"] }
-    ],
-    outboundRules: [
-        { protocol: "icmp", destinationAddresses: ["0.0.0.0/0"] },
-        { protocol: "tcp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] },
-        { protocol: "udp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] }
-    ],
-    tags: [_tagSlave.id]
-})
+    new Firewall("firewall-slave", {
+        name: config.firewallSlave.name,
+        inboundRules: [
+            { protocol: "tcp", portRange: "22", sourceAddresses: ["0.0.0.0/0"] }
+        ],
+        outboundRules: [
+            { protocol: "icmp", destinationAddresses: ["0.0.0.0/0"] },
+            { protocol: "tcp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] },
+            { protocol: "udp", portRange: "1-65535", destinationAddresses: ["0.0.0.0/0"] }
+        ],
+        tags: [_tagSlave.id]
+    })
 
-new ProjectResources("projectResources", {
-    project: _project.id,
-    resources: [
-        _dropletMaster.dropletUrn,
-        _dropletSlave.dropletUrn
-    ]
+    new ProjectResources("projectResources", {
+        project: _project.id,
+        resources: [
+            _dropletMaster.dropletUrn,
+            _dropletSlave.dropletUrn
+        ]
+    })
 })
