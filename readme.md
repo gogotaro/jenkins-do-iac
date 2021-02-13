@@ -32,3 +32,10 @@ Deploy stack to digitalocean and pulumi
 ```bash
 pulumi up
 ```
+
+After deploy finish access jenkins gui at master public ip with port 8080, credential was show below.
+
+username: admin
+password: admin
+
+Wait a minute and jenkins-agent will ready to use automatically!!!
