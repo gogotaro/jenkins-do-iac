@@ -116,9 +116,8 @@ _dropletMaster.ipv4AddressPrivate.apply(masterIP => {
       - [sed,-i,'s/jenkinsUser/${config.misc.jenkinsUser}/',/root/slave-init.sh]
       - [sed,-i,'s/jenkinsPassword/${config.misc.jenkinsPassword}/',/root/slave-init.sh]
       - [sed,-i,'s/jenkinsAgentName/${config.misc.jenkinsAgentName}/',/root/slave-init.sh]
-      - [sed,-i,'s/jenkinsAgentWorkDir/${config.misc.jenkinsAgentWorkDir}/',/root/slave-init.sh]
       - [sed,-i,'s/volumeSlaveName/${config.volumeSlave.name}/',/root/slave-init.sh]
-      - [sed,-i,'s/slaveImage/${config.misc.slaveImage}/',/root/slave-init.sh]
+      - [bash,/root/slave-init.sh]
     `
 
     const _dropletSlave = new Droplet("droplet-slave", {
